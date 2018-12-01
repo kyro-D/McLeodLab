@@ -2,6 +2,17 @@
 #Written by Kyle Rose for Python 2
 
 
+#imports
+import nidaqmx.system
+from time import sleep
+
+import os
+from ctypes import *
+from scipy import misc
+
+import XPS_Q8_drivers
+import sys
+
 def main():
     print "Welcome"
     numOfSteps = 200;
@@ -11,14 +22,14 @@ if __name__ == '__main__':
     main()
 
 
-
+#TODO make deconstructor, and Main printing function that calls all the subclasses
 class Print:
     #This is the main class that will handle all of the printing
     def __init__(self, exposeTime, waitTime, numberOfSteps, numberOfImages):
-        exptime = exposeTime
-        numOfSteps = numberOfSteps
-        numOfImgs = numberOfImages
-        wait = waitTime
+        self.exptime = exposeTime
+        self.numOfSteps = numberOfSteps
+        self.numOfImgs = numberOfImages
+        self.wait = waitTime
 
 
     def generateActuatorPositions(self, numberOfSteps, actuator1Position, \
@@ -74,9 +85,110 @@ class Print:
         return actuatorPositions
 
 
+class SLMSequencer:
+    #This class will handle all of the image storage and processing 
+
+class XPSController:
+    #This class will handle all of the actuator operations
+
+    def __init__(self, numberOfSteps, numberOfImages):
+        self.numSteps = numberOfSteps
+        self.numImgs = numberOfImages
+        self.myxps = XPS_Q8_drivers.XPS()
 
 
-        
+
+    def displayErrorAndClose (self, socketId, errorCode, APIName): 
+        if (errorCode != -2) and (errorCode != -108):
+            [errorCode2, errorString] = self.myxps.ErrorStringGet(socketId,errorCode)
+            if(errorCode2 != 0):
+                print APIName + ': ERROR ' + str(errorCode)
+            else:
+                print APIName + ': ' + errorString
+        else:
+            if (errorCode == -2):
+                print APIName + ': TCP timeout'
+            if (errorCode == -108):
+               print APIName + ': The TCP/IP connection was closed by an administrator'
+
+        self.myxps.TCP_CloseSocket(socketId)
+        return
+    
+
+    def connectToXPS(self, ipAddress):
+        # Connect to the XPS
+        socketId = self.myxps.TCP_ConnectToServer(ipAddress, 5001, 20)
+        print("Socket Id: ", socketId)
+        # Check connection passed
+        if (socketId == -1):
+            print 'Connection to XPS failed, check IP & Port'
+            sys.exit ()
+        return
+
+    #MUST CALL THIS METHOD AFTER MAKING CONNECTION TO XPS via connectToXPS() method
+    #groupName must be of the form 'GROUP(1-7)'
+    def initalizeActuatorGroup(self, groupName):
+        group = groupName
+
+
+
+
+
+
+class LEDController:
+    #This class will handle all of the LED operations
+    def __init__(self):
+
+
+    def expose(self, exposeTime):
+        with nidaqmx.Task() as task:
+            task.do_channels.add_do_chan(
+            'Dev1/port1/line3',
+            line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+
+            try:
+                task.write(True, auto_start=True)
+
+            except nidaqmx.DaqError as e:
+                print 'error ' , e
+
+            sleep(exposeTime)
+
+            try:
+                task.write(False, auto_start=True)
+
+            except nidaqmx.DaqError as e:
+                print 'error ' , e
+
+
+            return
+
+    def __del__(self):
+        #turn off the laser when the instance is deleted
+        with nidaqmx.Task() as task:
+            task.do_channels.add_do_chan(
+            'Dev1/port1/line3',
+            line_grouping=LineGrouping.CHAN_FOR_ALL_LINES)
+
+
+        try:
+            task.write(False, auto_start=True)
+
+        except nidaqmx.DaqError as e:
+            print 'error ' , e
+
+
+
+
+
+class SLMController:
+    #This class will handle all of the slm operations and utiliizes the class SLMSequencer
+
+
+
+
+
+
 
 
 
