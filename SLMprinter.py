@@ -95,6 +95,11 @@ class XPSController:
         self.numSteps = numberOfSteps
         self.numImgs = numberOfImages
         self.myxps = XPS_Q8_drivers.XPS()
+        #initialize all the groups
+        self.groups = ['GROUP1', 'GROUP2', 'GROUP3', 'GROUP4', 'GROUP5', 'GROUP6', 'GROUP7']
+        self.positioners = [self.groups[0]+'.POSITIONER', self.groups[1]+'.POSITIONER',self.groups[2]+'.POSITIONER',self.groups[3]+'.POSITIONER',\
+        self.groups[4]+'.POSITIONER',self.groups[5]+'.POSITIONER',self.groups[6]+'.POSITIONER']
+        self.socketID
 
 
 
@@ -114,22 +119,62 @@ class XPSController:
         self.myxps.TCP_CloseSocket(socketId)
         return
     
-
+    #possibly move this code into constructor
     def connectToXPS(self, ipAddress):
         # Connect to the XPS
-        socketId = self.myxps.TCP_ConnectToServer(ipAddress, 5001, 20)
-        print("Socket Id: ", socketId)
+        self.socketID = self.myxps.TCP_ConnectToServer(ipAddress, 5001, 20)
+        print("Socket Id: ", self.socketID)
         # Check connection passed
-        if (socketId == -1):
+        if (self.socketId == -1):
             print 'Connection to XPS failed, check IP & Port'
             sys.exit ()
         return
 
     #MUST CALL THIS METHOD AFTER MAKING CONNECTION TO XPS via connectToXPS() method
-    #groupName must be of the form 'GROUP(1-7)'
-    def initalizeActuatorGroup(self, groupName):
-        group = groupName
+    def initalizeActuatorGroup(self, groupNumber):
+        index = groupNumber - 1
+        #kill the group first
+        [errorCode, returnString] = self.myxps.GroupKill(self.socketID, self.groups[index])
+        if (errorCode != 0):
+            self.displayErrorAndClose(self.socketID, errorCode, 'GroupKill')
+            sys.exit ()
 
+        #initalize the group
+        [errorCode, returnString] = self.myxps.GroupInitialize(self.socketID, self.groups[index])
+        if (errorCode != 0):
+            self.displayErrorAndClose (self.socketID, errorCode, 'GroupKill')
+            sys.exit ()
+        return
+
+    def moveAbsoluteActuator(self, groupNumber):
+        [errorCode, returnString] = self.myxps.GroupMoveAbsolute(self.socketID)
+        
+        if (errorCode != 0):
+            self.displayErrorAndClose (self.socketID, errorCode, 'GroupMoveAbsolute')
+            sys.exit ()
+        return
+
+
+
+
+    def moveRelativeActuator(self, groupNumber):
+        [errorCode, returnString] = self.myxps.GroupMoveRelative(self.socketID)
+        
+        if (errorCode != 0):
+            self.displayErrorAndClose (self.socketID, errorCode, 'GroupMoveRelative')
+            sys.exit ()
+        return
+
+
+
+    def closeXPSConnection(self):
+        self.myxps.TCP_CloseSocket(self.socketID)        
+
+
+
+    def __del__(self):
+        #close the connection upon deleting instance of the class
+        self.closeXPSConnection()
 
 
 
