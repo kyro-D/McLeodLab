@@ -59,7 +59,7 @@ if(errorCode !=0):
 
 
 
-
+#gibbe de boss
 
 #MAKe some MOVES BABY
 [errorCode, returnString] = myxps.GroupMoveAbsolute(socketId, positioner, [10.0])
